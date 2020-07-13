@@ -1,0 +1,271 @@
+
+Dim Width As Long 'in pixels
+Dim Height As Long 'in pixels
+
+Dim swApp As Object
+Dim swModel As Object
+Dim swAberto As Object
+Dim swTableAnnotation As Object
+Dim exApp As Object
+Dim exWorkbook As Object
+Dim exWorkSheet As Object
+Dim swSelectionManager As Object
+Dim boolstatus99 As Boolean
+
+Dim EstadoExibicao As String
+Dim PosicaoExibicao As Integer
+Dim TempoInicial As Single
+Dim TempoFinal As Single
+Dim DeltaT As Single
+Dim Quantidade As Integer
+
+Public Enum swDocumentTypes_e
+swDocDRAWING = 3
+End Enum
+Public Enum xlTextAlignment
+xlCenter = -4108
+End Enum
+    
+Public Enum swTableHeaderPosition_e
+swTableHeader_Top = 1
+swTableHeader_Bottom = 2
+swTableHeader_None = 0
+End Enum
+Public Enum swSelectType_e
+swSelBOMS = 97
+End Enum
+
+Sub Main()
+
+Width = 19.86
+Height = 60.75
+
+'get pointer to the solidworks application
+Set swApp = Application.SldWorks
+'get active document
+Set swModel = swApp.ActiveDoc
+If swModel Is Nothing Then
+    swApp.SendMsgToUser "There is no active document"
+    End
+End If
+
+Set swSelectionManager = swModel.SelectionManager
+'get the count of selected objects
+Dim Count As Long
+Count = swSelectionManager.GetSelectedObjectCount2(-1)
+'if the user has made no selection then exit
+If Count = 0 Then
+ swApp.SendMsgToUser "You have not selected any bill of materials!"
+ Exit Sub
+End If
+'traverse the selection and process all selected bill of materials
+
+
+EstadoExibicao = InputBox("1 = Shaded With Edges  " + vbCrLf + "2 = Shaded" + vbCrLf + "3 = Hidden Lines" + vbCrLf + "4 = Hidden Greyed" + vbCrLf + "5 = Wireframe", "Estilo de Exibição", 1)
+PosicaoExibicao = InputBox("1 = Front" + vbCrLf + "2 = Back" + vbCrLf + "3 = Left" + vbCrLf + "4 = Right" + vbCrLf + "5 = Top" + vbCrLf + "6 = Bottom" + vbCrLf + "7 = Isometric" + vbCrLf + "8 = Trimetric" + vbCrLf + "9 = Dimetric", "Vista", 7)
+TempoInicial = Timer
+For i = 1 To Count
+ If swSelectionManager.GetSelectedObjectType3(i, -1) = SwConst.swSelectType_e.swSelANNOTATIONTABLES Then
+ Set swTableAnnotation = swSelectionManager.GetSelectedObject6(i, -1)
+ Dim Ret As String
+ Ret = SaveBOMInExcelWithThumbNail(swTableAnnotation)
+ If Ret = "" Then
+ 'Debug.Print "Success: " & swTableAnnotation.GetAnnotation.GetName
+ 
+ TempoFinal = Timer
+ DeltaT = -TempoInicial + TempoFinal
+ Quantidade = swTableAnnotation.RowCount - 1
+ Dim Periodo As Single
+ Periodo = DeltaT / Quantidade
+ swApp.SendMsgToUser "Qtd de peças = " & Quantidade & vbCrLf & "Tempo decorrido = " & DeltaT & "s" & vbCrLf & "Tempo médio de cada peça = " & Periodo
+ Debug.Print "Qtd de peças = " & Quantidade & vbCrLf & "Tempo decorrido = " & DeltaT & "s" & vbCrLf & "Tempo médio de cada peça = " & Periodo
+ Else
+ swApp.SendMsgToUser "Macro failed to export!"
+ End If
+ 
+ End If
+
+Next i
+
+End Sub
+
+Public Function SaveBOMInExcelWithThumbNail(ByRef swTableAnnotation As Object) As String
+
+Set exApp = CreateObject("Excel.Application")
+If exApp Is Nothing Then
+SaveBOMInExcelWithThumbNail = "Unable to initialize the Excel application"
+Exit Function
+End If
+exApp.Visible = True
+Set exWorkbook = exApp.Workbooks.Add
+Set exWorkSheet = exWorkbook.ActiveSheet
+If exWorkSheet Is Nothing Then
+    SaveBOMInExcelWithThumbNail = "Unable to get the active sheet"
+    Exit Function
+End If
+
+If swTableAnnotation.RowCount = 0 Then
+    SaveBOMInExcelWithThumbNail = "BOM has no rows!"
+End If
+
+Dim swBOMTableAnnotation As BomTableAnnotation
+Set swBOMTableAnnotation = swTableAnnotation
+
+'set column width
+exWorkSheet.Columns(1).ColumnWidth = Width
+            
+Dim HeaderRowIndex As Long
+Dim swHeaderIndex As Integer
+swHeaderTable = swTableAnnotation.GetHeaderStyle
+If swHeaderTable = swTableHeaderPosition_e.swTableHeader_Bottom Then
+    swHeaderIndex = swTableAnnotation.RowCount
+Else
+    swHeaderIndex = 1
+End If
+
+Skipper:
+For i = 0 To swTableAnnotation.RowCount - 1
+'For i = 90 To 100
+    If swTableAnnotation.RowHidden(i) Then
+    GoTo Skipper
+    End If
+    'add preview image
+    Dim swComponents As Variant
+    swComponents = swBOMTableAnnotation.GetComponents(i)
+    If Not IsEmpty(swComponents) Then
+        Dim swComponent As Object
+        Set swComponent2 = swComponents(0)
+        Dim swComponentModel As Object
+        Set swComponentModel = swComponent2.GetModelDoc2
+        If Not swComponentModel Is Nothing Then
+            swComponentModel.Visible = True
+            
+            
+            Dim imagePath As String
+            Dim caminhoarquivo As String
+            Dim imageSave As String
+            Dim Titulo As String
+            Dim configuracao As String
+            
+            caminhoarquivo = swComponentModel.GetPathName
+            Titulo = swComponentModel.GetTitle
+            imageSave = Left(caminhoarquivo, Len(caminhoarquivo) - 7) + ".png"
+            
+           ' Set swAberto = swApp.OpenDoc6(caminhoarquivo, 1, 1, "", errors, warnings)
+            
+           ' Dim swConfig As SldWorks.Configuration
+          
+        '  Set swConfig = swAberto.GetActiveConfiguration
+   ' Debug.Print "  Name of active configuration = " & swConfig.Name
+    
+            'imagePath = Environ("TEMP") + "\tempBitmap.jpg"
+           'Debug.Print configuracao
+           
+            'Property of image_________________________________________________________________________
+
+Dim Part99 As Object
+Dim activeModelView99 As Object
+Set Part99 = swApp.ActiveDoc
+
+If EstadoExibicao = 1 Then
+Set activeModelView99 = Part99.ActiveView
+activeModelView99.DisplayMode = swViewDisplayMode_e.swViewDisplayMode_ShadedWithEdges
+
+boolstatus99 = Part99.SetUserPreferenceToggle(swUserPreferenceToggle_e.swViewDisplayHideAllTypes, True)
+ 
+ ElseIf EstadoExibicao = 2 Then
+ swComponentModel.ViewDisplayShaded
+ boolstatus99 = Part99.SetUserPreferenceToggle(swUserPreferenceToggle_e.swViewDisplayHideAllTypes, True)
+ 
+  ElseIf EstadoExibicao = 3 Then
+ swComponentModel.ViewDisplayHiddenremoved
+ boolstatus99 = Part99.SetUserPreferenceToggle(swUserPreferenceToggle_e.swViewDisplayHideAllTypes, True)
+ 
+  ElseIf EstadoExibicao = 4 Then
+ swComponentModel.ViewDisplayHiddengreyed
+ boolstatus99 = Part99.SetUserPreferenceToggle(swUserPreferenceToggle_e.swViewDisplayHideAllTypes, True)
+ 
+   ElseIf EstadoExibicao = 5 Then
+ swComponentModel.ViewDisplayWireframe
+ boolstatus99 = Part99.SetUserPreferenceToggle(swUserPreferenceToggle_e.swViewDisplayHideAllTypes, True)
+ 
+ End If
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+            
+            
+            swComponentModel.ShowNamedView2 "", PosicaoExibicao
+            
+            
+            
+            swComponentModel.ViewZoomtofit2
+
+            Dim saveRet As Boolean
+            Dim er As Long
+            Dim wr As Long
+            'saveRet = swComponentModel.Extension.SaveAs(imagePath, 0, 0, Nothing, er, wr)
+            saveRet = swComponentModel.Extension.SaveAs(imageSave, 0, 0, Nothing, er, wr)
+            If er + wr > 0 Then
+            SaveBOMInExcelWithThumbNail = "An error has occured while trying to save the thumbnail of " & swModel.GetTitle & " to the local temp folder. The macro will exit now."
+            End If
+            swComponentModel.Visible = False
+            exWorkSheet.Rows(i + 1).RowHeight = Height
+            'InsertPictureInRange exWorkSheet, imagePath, exWorkSheet.Range("A" & i + 1 & ":A" & i + 1)
+            InsertPictureInRange exWorkSheet, imageSave, exWorkSheet.Range("A" & i + 1 & ":A" & i + 1)
+            End If
+    End If
+    
+    For j = 0 To swTableAnnotation.ColumnCount - 1
+        If swTableAnnotation.ColumnHidden(j) Then
+        GoTo Skipper
+        End If
+        exWorkSheet.Cells(i + 1, j + 2).Value = swTableAnnotation.DisplayedText(i, j)
+    Next j
+    
+swApp.CloseDoc Titulo
+Next i
+
+'add header row to bold
+For j = 2 To swTableAnnotation.ColumnCount + 1
+  exWorkSheet.Cells(swHeaderIndex, j).Font.Bold = True
+Next j
+
+Dim r As Object
+Set r = exWorkSheet.Range(exWorkSheet.Cells(1, 2), exWorkSheet.Cells(swTableAnnotation.RowCount + 1, swTableAnnotation.ColumnCount + 1))
+r.Columns.AutoFit
+r.HorizontalAlignment = xlTextAlignment.xlCenter
+r.VerticalAlignment = xlTextAlignment.xlCenter
+
+End Function
+
+
+Sub InsertPictureInRange(ActiveSheet As Object, PictureFileName As String, TargetCells As Object)
+' inserts a picture and resizes it to fit the TargetCells range
+Dim p As Object, t As Double, l As Double, w As Double, h As Double
+    If TypeName(ActiveSheet) <> "Worksheet" Then Exit Sub
+    If Dir(PictureFileName) = "" Then Exit Sub
+    ' import picture
+    Set p = ActiveSheet.Pictures.Insert(PictureFileName)
+    ' determine positions
+    With TargetCells
+        t = .Top
+        l = .Left
+        w = .Offset(0, .Columns.Count).Left - .Left
+        h = .Offset(.Rows.Count, 0).Top - .Top
+    End With
+    ' position picture
+    With p
+        .Top = t
+        .Left = l
+        .Width = w
+        .Height = h
+    End With
+    Set p = Nothing
+End Sub
